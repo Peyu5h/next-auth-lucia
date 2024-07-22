@@ -15,6 +15,13 @@ export async function login(
     const validatedCredentials = await loginSchema.validate(credentials);
     const { email, password } = validatedCredentials;
 
+    try {
+      await prisma.$connect();
+    } catch (error) {
+      console.error("Database connection error:", error);
+      return { error: "Cannot connect to the database." };
+    }
+
     const existingUser = await prisma.user.findFirst({
       where: {
         email: {

@@ -6,6 +6,19 @@ import prisma from '@/lib/prisma';
 import { github, lucia } from '@/auth';
 
 export async function GET(request: Request): Promise<Response> {
+
+  try {
+    await prisma.$connect();
+  } catch (error) {
+    console.error("Database connection error:", error);
+    return new Response(JSON.stringify({ error: "Cannot connect to the database." }), {
+      status: 500,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  }
+
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
@@ -15,6 +28,7 @@ export async function GET(request: Request): Promise<Response> {
       status: 400,
     });
   }
+
 
   try {
     const tokens = await github.validateAuthorizationCode(code);

@@ -15,7 +15,6 @@ interface UserButtonProps {
 export const UserButton: React.FC<{ user: UserButtonProps }> = ({ user }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [dropdownPosition, setDropdownPosition] = useState<string>("left-0");
 
   const toggleDropdown = () => setShowDropdown((prev) => !prev);
 
@@ -32,17 +31,6 @@ export const UserButton: React.FC<{ user: UserButtonProps }> = ({ user }) => {
     };
   }, []);
 
-  useEffect(() => {
-    if (dropdownRef.current) {
-      const rect = dropdownRef.current.getBoundingClientRect();
-      if (rect.right > window.innerWidth) {
-        setDropdownPosition("right-0");
-      } else {
-        setDropdownPosition("left-0");
-      }
-    }
-  }, [showDropdown]);
-
   return (
     <div className="relative h-12 w-12 cursor-pointer">
       <img
@@ -54,7 +42,7 @@ export const UserButton: React.FC<{ user: UserButtonProps }> = ({ user }) => {
       {showDropdown && (
         <div
           ref={dropdownRef}
-          className={`absolute top-16 ${dropdownPosition} w-40 bg-white rounded-lg shadow-lg transition-transform transform ${
+          className={`absolute top-16 right-0 w-40 bg-white rounded-lg shadow-lg transition-transform transform ${
             showDropdown ? "scale-100 opacity-100" : "scale-90 opacity-0"
           }`}
           style={{ transition: "all 0.3s ease" }}
@@ -63,7 +51,7 @@ export const UserButton: React.FC<{ user: UserButtonProps }> = ({ user }) => {
             <li className="p-2 hover:bg-gray-100 cursor-pointer">Profile</li>
             <li className="p-2 hover:bg-gray-100 cursor-pointer">Settings</li>
             <li
-              onClick={()=> logout()}
+              onClick={()=>logout()}
               className="p-2 hover:bg-gray-100 cursor-pointer"
             >
               Logout

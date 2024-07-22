@@ -8,7 +8,13 @@ export const registerSchema = yup.object().shape({
   password: yup.string().min(6, "Password must be at least 6 characters"),
 });
 
+export type RegisterValues = yup.InferType<typeof registerSchema>;
+
+
+
 export const loginSchema = yup.object().shape({
   email: yup.string().email("Enter a valid email"),
   password: yup.string().min(6, "Password must be at least 6 characters"),
 });
+
+export type LoginValues = yup.InferType<typeof loginSchema>;

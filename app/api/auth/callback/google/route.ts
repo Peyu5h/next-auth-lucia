@@ -6,6 +6,20 @@ import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 
 export async function GET(req: NextRequest) {
+
+  try {
+    await prisma.$connect();
+  } catch (error) {
+    console.error("Database connection error:", error);
+    return new Response(JSON.stringify({ error: "Cannot connect to the database." }), {
+      status: 500,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  }
+
+
   const code = req.nextUrl.searchParams.get("code");
   const state = req.nextUrl.searchParams.get("state");
 

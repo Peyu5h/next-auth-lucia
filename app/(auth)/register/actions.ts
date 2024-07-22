@@ -14,6 +14,15 @@ export async function register(
 ): Promise<{ error: string }> {
   try {
 
+    try {
+      await prisma.$connect();
+    } catch (error) {
+      console.error("Database connection error:", error);
+      return { error: "Cannot connect to the database" };
+    }
+
+
+
     const validatedCredentials = await registerSchema.validate(credentials);
     const {name, email, password } = validatedCredentials;
 
