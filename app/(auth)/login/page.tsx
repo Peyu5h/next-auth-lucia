@@ -9,10 +9,15 @@ import { login } from './actions';
 import { FcGoogle } from 'react-icons/fc';
 import { FaGithub } from 'react-icons/fa';
 import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import { ToastAction } from '@radix-ui/react-toast';
 
 const LoginPage = () => {
   const [error, setError] = useState('');
   const [showPass, setShowPass] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
   const formik = useFormik({
     initialValues: {
@@ -21,16 +26,19 @@ const LoginPage = () => {
     },
     validationSchema: loginSchema,
     onSubmit: async (values) => {
+      setLoading(true);
       const { error } = await login(values);
       if (error) {
-        setError(error);
+        setLoading(false);
+        toast({
+          variant: 'destructive',
+          description: error,
+        });
+      } else {
+        setLoading(false);
       }
     },
   });
-
-  const handleShowPassToggle = () => {
-    setShowPass((prevState) => !prevState);
-  };
 
   const { errors, touched, handleChange, handleBlur, handleSubmit, values } =
     formik;
@@ -104,9 +112,16 @@ const LoginPage = () => {
           <div className="btn">
             <div className="error mb-2 ml-3 text-xs text-red-500">{error}</div>
 
-            <Button className="w-full py-4" type="submit">
-              Sign in
-            </Button>
+            {loading ? (
+              <Button className="w-full py-4" disabled>
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                Please wait
+              </Button>
+            ) : (
+              <Button className="w-full py-4" type="submit">
+                Sign in
+              </Button>
+            )}
           </div>
 
           <p className="dark:text-dark-text mt-2 flex flex-row items-center justify-center gap-x-2 text-center text-sm">

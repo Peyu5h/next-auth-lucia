@@ -1,39 +1,36 @@
-"use server";
+'use server';
 
-import { lucia } from "@/auth";
-import prisma from "@/lib/prisma";
-import bcrypt from "bcrypt";
-import { generateIdFromEntropySize } from "lucia";
-import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
-import { isRedirectError } from "next/dist/client/components/redirect";
-import { registerSchema, RegisterValues } from "@/lib/yupValidation";
+import { lucia } from '@/auth';
+import prisma from '@/lib/prisma';
+import bcrypt from 'bcrypt';
+import { generateIdFromEntropySize } from 'lucia';
+import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
+import { isRedirectError } from 'next/dist/client/components/redirect';
+import { registerSchema, RegisterValues } from '@/lib/yupValidation';
 
 export async function register(
-  credentials: RegisterValues,
-): Promise<{ error: string }> {
+  credentials: RegisterValues
+): Promise<{ error?: string; message?: string }> {
   try {
-
     try {
       await prisma.$connect();
     } catch (error) {
-      console.error("Database connection error:", error);
-      return { error: "Cannot connect to the database" };
+      console.error('Database connection error:', error);
+      return { error: 'Cannot connect to the database' };
     }
 
-
-
     const validatedCredentials = await registerSchema.validate(credentials);
-    const {name, email, password } = validatedCredentials;
+    const { name, email, password } = validatedCredentials;
 
     if (!password) {
-      throw new Error("Password is undefined");
+      throw new Error('Password is undefined');
     }
 
     if (!name) {
-      throw new Error("Name is undefined");
+      throw new Error('Name is undefined');
     }
-    
+
     const passwordHash = await bcrypt.hash(password, 10);
 
     const userId = generateIdFromEntropySize(10);
@@ -41,26 +38,26 @@ export async function register(
       where: {
         name: {
           equals: name,
-          mode: "insensitive",
+          mode: 'insensitive',
         },
       },
     });
 
     if (existingUsername) {
-      return { error: "Username already exists" };
+      return { error: 'Username already exists' };
     }
 
     const existingEmail = await prisma.user.findFirst({
       where: {
         email: {
           equals: email,
-          mode: "insensitive",
+          mode: 'insensitive',
         },
       },
     });
 
     if (existingEmail) {
-      return { error: "Email already exists" };
+      return { error: 'Email already exists' };
     }
 
     const user = await prisma.user.create({
@@ -78,13 +75,13 @@ export async function register(
     cookies().set(
       sessionCookie.name,
       sessionCookie.value,
-      sessionCookie.attributes,
+      sessionCookie.attributes
     );
 
-    return redirect("/");
+    return { message: 'User created successfully' };
   } catch (error) {
     if (isRedirectError(error)) throw error;
     console.error(error);
-    return { error: "An error occurred" };
+    return { error: 'An error occurred' };
   }
 }
