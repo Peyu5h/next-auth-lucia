@@ -2,33 +2,22 @@ import { cookies } from 'next/headers';
 import { OAuth2RequestError } from 'arctic';
 import { v4 as uuidv4 } from 'uuid';
 
-import prisma from '@/lib/prisma';
 import { github, lucia } from '@/auth';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 export async function GET(request: Request): Promise<Response> {
-
-  try {
-    await prisma.$connect();
-  } catch (error) {
-    console.error("Database connection error:", error);
-    return new Response(JSON.stringify({ error: "Cannot connect to the database." }), {
-      status: 500,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-  }
-
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
   const storedState = cookies().get('github_oauth_state')?.value ?? null;
+
   if (!code || !state || !storedState || state !== storedState) {
     return new Response(null, {
       status: 400,
     });
   }
-
 
   try {
     const tokens = await github.validateAuthorizationCode(code);
@@ -61,11 +50,11 @@ export async function GET(request: Request): Promise<Response> {
 
     const user = await prisma.user.create({
       data: {
-        id: uuidv4(), 
+        id: uuidv4(),
         githubId: githubUser.id.toString(),
         name: githubUser.login,
         email: githubUser.email ?? null,
-        avatarUrl: githubUser.avatar_url, 
+        avatarUrl: githubUser.avatar_url,
       },
     });
 
@@ -83,6 +72,7 @@ export async function GET(request: Request): Promise<Response> {
       },
     });
   } catch (e) {
+    console.error(e);
     if (e instanceof OAuth2RequestError) {
       return new Response(null, {
         status: 400,
@@ -91,12 +81,14 @@ export async function GET(request: Request): Promise<Response> {
     return new Response(null, {
       status: 500,
     });
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
 interface GitHubUser {
   id: number;
   login: string;
-  email?: string; 
-  avatar_url: string; 
+  email?: string;
+  avatar_url: string;
 }

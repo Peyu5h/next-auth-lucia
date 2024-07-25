@@ -1,30 +1,17 @@
-import { google, lucia } from "@/auth";
-import prisma from "@/lib/prisma";
-import { OAuth2RequestError } from "arctic";
-import { generateIdFromEntropySize } from "lucia";
-import { cookies } from "next/headers";
-import { NextRequest } from "next/server";
+import { google, lucia } from '@/auth';
+import { OAuth2RequestError } from 'arctic';
+import { generateIdFromEntropySize } from 'lucia';
+import { cookies } from 'next/headers';
+import { NextRequest } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 export async function GET(req: NextRequest) {
-
-  try {
-    await prisma.$connect();
-  } catch (error) {
-    console.error("Database connection error:", error);
-    return new Response(JSON.stringify({ error: "Cannot connect to the database." }), {
-      status: 500,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-  }
-
-
-  const code = req.nextUrl.searchParams.get("code");
-  const state = req.nextUrl.searchParams.get("state");
-
-  const storedState = cookies().get("state")?.value;
-  const storedCodeVerifier = cookies().get("code_verifier")?.value;
+  const code = req.nextUrl.searchParams.get('code');
+  const state = req.nextUrl.searchParams.get('state');
+  const storedState = cookies().get('state')?.value;
+  const storedCodeVerifier = cookies().get('code_verifier')?.value;
 
   if (
     !code ||
@@ -39,14 +26,17 @@ export async function GET(req: NextRequest) {
   try {
     const tokens = await google.validateAuthorizationCode(
       code,
-      storedCodeVerifier,
+      storedCodeVerifier
     );
 
-    const googleUser = await fetch("https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=" + tokens.accessToken, {
+    const googleUser = await fetch(
+      'https://www.googleapis.com/oauth2/v1/userinfo?alt=json',
+      {
         headers: {
           Authorization: `Bearer ${tokens.accessToken}`,
         },
-      }).then((res) => res.json());
+      }
+    ).then((res) => res.json());
 
     const existingUser = await prisma.user.findUnique({
       where: {
@@ -60,31 +50,31 @@ export async function GET(req: NextRequest) {
       cookies().set(
         sessionCookie.name,
         sessionCookie.value,
-        sessionCookie.attributes,
+        sessionCookie.attributes
       );
       return new Response(null, {
         status: 302,
         headers: {
-          Location: "/",
+          Location: '/',
         },
       });
     }
 
     const userId = generateIdFromEntropySize(10);
-
-    const name = googleUser.name.toLowerCase().replace(/ /g, "-") + "-" + userId.slice(0, 4);
+    const name =
+      googleUser.name.toLowerCase().replace(/ /g, '-') +
+      '-' +
+      userId.slice(0, 4);
     const avatarUrl = googleUser.picture;
 
-    await prisma.$transaction(async (tx) => {
-      await tx.user.create({
-        data: {
-          id: userId,
-          name,
-          googleId: googleUser.id,
-          email: googleUser.email, // Store the email
-          avatarUrl, // Store the profile image URL
-        },
-      });
+    await prisma.user.create({
+      data: {
+        id: userId,
+        name,
+        googleId: googleUser.id,
+        email: googleUser.email,
+        avatarUrl,
+      },
     });
 
     const session = await lucia.createSession(userId, {});
@@ -92,13 +82,13 @@ export async function GET(req: NextRequest) {
     cookies().set(
       sessionCookie.name,
       sessionCookie.value,
-      sessionCookie.attributes,
+      sessionCookie.attributes
     );
 
     return new Response(null, {
       status: 302,
       headers: {
-        Location: "/",
+        Location: '/',
       },
     });
   } catch (error) {
@@ -111,5 +101,7 @@ export async function GET(req: NextRequest) {
     return new Response(null, {
       status: 500,
     });
+  } finally {
+    await prisma.$disconnect();
   }
 }
